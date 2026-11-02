@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Material | Nilufar Teacher's Tools</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">✦ Nilufar Teacher's Tools</a>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="index.html#categories">Categories</a>
+    <a href="admin.html" class="admin-link">Admin Panel</a>
+  </nav>
+</header>
+
+<main class="container">
+  <a href="index.html" class="card-link">← Back to Home</a>
+  <div class="detail" id="materialDetails" style="margin-top:25px">Loading material...</div>
+</main>
+<footer>© 2026 Nilufar Teacher's Tools</footer>
+
+<script>
+(async function loadMaterial() {
+  const id = new URLSearchParams(location.search).get("id");
+  const area = document.getElementById("materialDetails");
+  if (!id) {
+    area.innerHTML = "<h2>Material not found</h2><a href='index.html'>Go home</a>";
+    return;
+  }
+  try {
+    const { data: item, error } = await db.from("materials").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    if (!item) {
+      area.innerHTML = "<h2>Material not found</h2><a href='index.html'>Go home</a>";
+      return;
+    }
+    const imageUrl = safeHttpUrl(item.image_url);
+    const resourceUrl = safeHttpUrl(item.resource_url);
+    area.innerHTML = `
+      <div class="card-icon">${escapeHTML(item.icon || "📚")}</div>
+      <p class="card-category">${escapeHTML(item.category)}</p>
+      <h1>${escapeHTML(item.title)}</h1>
+      <p>${escapeHTML(item.description)}</p>
+      ${imageUrl ? `<img class="material-image" src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.title)}">` : ""}
+      <hr class="soft-rule">
+      <h2>About this material</h2>
+      <p class="material-content">${escapeHTML(item.content).replace(/\n/g, "<br>")}</p>
+      ${resourceUrl ? `<p><a class="primary-btn inline-btn" href="${escapeHTML(resourceUrl)}" target="_blank" rel="noopener noreferrer">Open resource ↗</a></p>` : ""}
+    `;
+  } catch (error) {
+    console.error(error);
+    area.innerHTML = "<h2>Could not load this material</h2><p>Please check the Supabase connection.</p><a href='index.html'>Go home</a>";
+  }
+})();
+</script>
+</body>
+</html>

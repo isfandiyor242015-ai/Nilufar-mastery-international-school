@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel | Nilufar Teacher's Tools</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">✦ Nilufar Teacher's Tools</a>
+  <nav><a href="index.html">Home</a><a href="index.html#materials">Materials</a></nav>
+</header>
+
+<main class="container">
+  <h1>Admin Panel ⚙️</h1>
+  <p class="muted">Sign in to manage educational materials.</p>
+
+  <section class="admin-form" id="loginSection">
+    <h2>Administrator login</h2>
+    <form id="loginForm">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" required placeholder="Your admin email">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required placeholder="Your password">
+      <button class="primary-btn" type="submit">Sign in</button>
+    </form>
+    <p id="loginMessage" class="status" role="status"></p>
+  </section>
+
+  <section id="adminArea" hidden>
+    <div class="admin-toolbar">
+      <p id="signedInAs" class="muted"></p>
+      <button class="secondary-btn" id="signOutBtn" type="button">Sign out</button>
+    </div>
+
+    <form class="admin-form" id="materialForm">
+      <h2 id="formHeading">Add a material</h2>
+      <input id="materialId" type="hidden">
+      <label for="title">Material title</label>
+      <input id="title" required placeholder="Example: English Vocabulary">
+
+      <label for="category">Category</label>
+      <select id="category" required>
+        <option>English</option>
+        <option>IELTS</option>
+        <option>Vocabulary</option>
+        <option>Speaking</option>
+        <option>Listening</option>
+        <option>Grammar</option>
+        <option>Games</option>
+        <option>Activities</option>
+      </select>
+
+      <label for="icon">Icon (emoji)</label>
+      <input id="icon" value="📚">
+
+      <label for="description">Description</label>
+      <input id="description" required placeholder="Short description">
+
+      <label for="content">Full content</label>
+      <textarea id="content" required placeholder="Write material information..."></textarea>
+
+      <label for="imageUrl">Image URL (optional)</label>
+      <input id="imageUrl" type="url" placeholder="https://...">
+
+      <label for="resourceUrl">Resource URL (optional)</label>
+      <input id="resourceUrl" type="url" placeholder="https://...">
+
+      <div class="form-actions">
+        <button class="primary-btn" type="submit" id="saveBtn">Add Material +</button>
+        <button class="secondary-btn" type="button" id="cancelEditBtn" hidden>Cancel edit</button>
+      </div>
+      <p id="formMessage" class="status" role="status"></p>
+    </form>
+
+    <div class="section-title"><h2>Existing Materials</h2></div>
+    <div id="adminMaterials"><p class="empty">Loading materials...</p></div>
+  </section>
+</main>
+
+<footer>© 2026 Nilufar Teacher's Tools</footer>
+
+<script>
+const loginSection = document.getElementById("loginSection");
+const adminArea = document.getElementById("adminArea");
+const loginForm = document.getElementById("loginForm");
+const loginMessage = document.getElementById("loginMessage");
+const form = document.getElementById("materialForm");
+const formMessage = document.getElementById("formMessage");
+
+function setMessage(element, message, isError = false) {
+  element.textContent = message;
+  element.className = isError ? "status error" : "status";
+}
+
+function resetMaterialForm() {
+  form.reset();
+  document.getElementById("materialId").value = "";
+  document.getElementById("icon").value = "📚";
+  document.getElementById("formHeading").textContent = "Add a material";
+  document.getElementById("saveBtn").textContent = "Add Material +";
+  document.getElementById("cancelEditBtn").hidden = true;
+  setMessage(formMessage, "");
+}
+
+async function refreshAdminMaterials() {
+  const area = document.getElementById("adminMaterials");
+  area.innerHTML = '<p class="empty">Loading materials...</p>';
+  try {
+    const materials = await getMaterials();
+    if (!materials.length) {
+      area.innerHTML = '<p class="empty">There are no materials yet.</p>';
+      return;
+    }
+    area.innerHTML = materials.map(item => `
+      <div class="card admin-material">
+        <div>
+          <strong>${escapeHTML(item.icon || "📚")} ${escapeHTML(item.title)}</strong>
+          <p class="muted">${escapeHTML(item.category)}</p>
+        </div>
+        <div class="form-actions">
+          <button class="secondary-btn" type="button" data-edit="${escapeHTML(item.id)}">Edit</button>
+          <button class="danger-btn" type="button" data-delete="${escapeHTML(item.id)}">Delete</button>
+        </div>
+      </div>
+    `).join("");
+
+    area.querySelectorAll("[data-edit]").forEach(button => {
+      button.addEventListener("click", () => {
+        const item = materials.find(x => String(x.id) === button.dataset.edit);
+        if (!item) return;
+        document.getElementById("materialId").value = item.id;
+        document.getElementById("title").value = item.title || "";
+        document.getElementById("category").value = item.category || "English";
+        document.getElementById("icon").value = item.icon || "📚";
+        document.getElementById("description").value = item.description || "";
+        document.getElementById("content").value = item.content || "";
+        document.getElementById("imageUrl").value = item.image_url || "";
+        document.getElementById("resourceUrl").value = item.resource_url || "";
+        document.getElementById("formHeading").textContent = "Edit material";
+        document.getElementById("saveBtn").textContent = "Save changes";
+        document.getElementById("cancelEditBtn").hidden = false;
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    area.querySelectorAll("[data-delete]").forEach(button => {
+      button.addEventListener("click", async () => {
+        if (!confirm("Delete this material?")) return;
+        const { error } = await db.from("materials").delete().eq("id", button.dataset.delete);
+        if (error) {
+          alert("Could not delete: " + error.message);
+          return;
+        }
+        await refreshAdminMaterials();
+      });
+    });
+  } catch (error) {
+    console.error(error);
+    area.innerHTML = '<p class="empty">Could not load materials. Check your connection and RLS policies.</p>';
+  }
+}
+
+async function showAdmin(user) {
+  loginSection.hidden = true;
+  adminArea.hidden = false;
+  document.getElementById("signedInAs").textContent = "Signed in as " + user.email;
+  await refreshAdminMaterials();
+}
+
+loginForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  setMessage(loginMessage, "Signing in...");
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) {
+    setMessage(loginMessage, error.message, true);
+    return;
+  }
+  await showAdmin(data.user);
+});
+
+document.getElementById("signOutBtn").addEventListener("click", async () => {
+  const { error } = await db.auth.signOut();
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  adminArea.hidden = true;
+  loginSection.hidden = false;
+  loginForm.reset();
+  setMessage(loginMessage, "You have signed out.");
+});
+
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  const id = document.getElementById("materialId").value;
+  const item = {
+    title: document.getElementById("title").value.trim(),
+    category: document.getElementById("category").value,
+    icon: document.getElementById("icon").value.trim() || "📚",
+    description: document.getElementById("description").value.trim(),
+    content: document.getElementById("content").value.trim(),
+    image_url: document.getElementById("imageUrl").value.trim() || null,
+    resource_url: document.getElementById("resourceUrl").value.trim() || null
+  };
+
+  setMessage(formMessage, "Saving...");
+  const result = id
+    ? await db.from("materials").update(item).eq("id", id).select()
+    : await db.from("materials").insert(item).select();
+
+  if (result.error) {
+    setMessage(formMessage, result.error.message, true);
+    return;
+  }
+  resetMaterialForm();
+  setMessage(formMessage, id ? "Material updated!" : "Material added!");
+  await refreshAdminMaterials();
+});
+
+document.getElementById("cancelEditBtn").addEventListener("click", resetMaterialForm);
+
+(async function checkSession() {
+  const { data, error } = await db.auth.getSession();
+  if (error) {
+    setMessage(loginMessage, error.message, true);
+    return;
+  }
+  if (data.session) await showAdmin(data.session.user);
+})();
+</script>
+</body>
+</html>
