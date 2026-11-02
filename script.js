@@ -2,8 +2,7 @@
 // Replace BOTH placeholders below with your own Project URL and Publishable key.
 // Never put a Supabase Secret key or service_role key in this file.
 const SUPABASE_URL = "https://brztnafjpyilsiijnhjl.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyenRuYWZqcHlpbHNpaWpuaGpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0NTIwNzcsImV4cCI6MjEwOTAyODA3N30.-W148061Fde_mimqPZsBM5Xgw0RH1mzzTU3FMhLDvFw        
-";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyenRuYWZqcHlpbHNpaWpuaGpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0NTIwNzcsImV4cCI6MjEwOTAyODA3N30.-W148061Fde_mimqPZsBM5Xgw0RH1mzzTU3FMhLDvFw        ";
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 window.db = db;
